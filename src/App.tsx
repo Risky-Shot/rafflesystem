@@ -104,7 +104,11 @@ function App() {
   const ticketsRef = useRef(tickets);
   useEffect(() => {
     ticketsRef.current = tickets;
+    console.log(isRaffleRunning, winningTicket, ticketsToEliminate);
   }, [tickets]);
+
+  // Create a ref to store the elimination interval ID
+  const eliminationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sound effects
   const tickSound = useRef(
@@ -163,6 +167,7 @@ function App() {
     const interval = setInterval(() => {
       setTickets((prev) => {
         const available = prev.filter((t) => !t.eliminated);
+        // The shuffled variable is no longer used but kept in case you want to extend logic
         const shuffled = [...available].sort(() => Math.random() - 0.5);
 
         return prev.map((ticket) => {
@@ -201,7 +206,11 @@ function App() {
   }, []);
 
   const handleStartRaffle = () => {
-    if (isRaffleRunning || ticketsToEliminate <= 0) return;
+    if (isRaffleRunning || (ticketsToEliminate === 1 && availableTickets < 2))
+      return;
+
+    // Capture the current elimination count before resetting it.
+    const eliminationCount = ticketsToEliminate;
 
     setIsRaffleRunning(true);
     setCurrentRound((prev) => prev + 1);
@@ -209,6 +218,7 @@ function App() {
     totalEliminatedRef.current = 0; // Reset for new round
     setWinningTicket(null);
 
+    // Reset the slider for the next round.
     setTicketsToEliminate(1);
 
     // Phase 1: Shuffle Animation (1 second)
@@ -218,7 +228,7 @@ function App() {
       // Start highlight phase
       const highlightInterval = setInterval(highlightRandomTickets, 100);
 
-      // After 2 seconds, stop highlighting and clear any leftover purple highlight
+      // After 2 seconds, stop highlighting and clear any leftover highlight
       setTimeout(() => {
         clearInterval(highlightInterval);
         setTickets((prev) =>
@@ -226,17 +236,21 @@ function App() {
         );
 
         // Phase 2: Elimination logic
-        const roundEliminationCount = ticketsToEliminate;
-        const totalBatches = Math.min(10, roundEliminationCount);
-        const baseBatchSize = Math.ceil(roundEliminationCount / totalBatches);
+        const totalBatches = Math.min(10, eliminationCount);
+        const baseBatchSize = Math.floor(eliminationCount / totalBatches);
+        let extraTickets = eliminationCount % totalBatches;
         let currentBatch = 0;
 
         const eliminationInterval = setInterval(() => {
+          // Get the number of available tickets
           const availableCount = ticketsRef.current.filter(
             (t) => !t.eliminated
           ).length;
-          if (availableCount <= 1) {
+
+          // If only 1 ticket remains, the game is over.
+          if (availableCount === 1) {
             clearInterval(eliminationInterval);
+            eliminationIntervalRef.current = null;
             setIsRaffleRunning(false);
             if (isSoundEnabled) winnerSound.current.play();
             setShowConfetti(true);
@@ -255,18 +269,25 @@ function App() {
             return;
           }
 
-          // Calculate how many tickets we still need to eliminate
-          const remainingToEliminate =
-            roundEliminationCount - totalEliminatedRef.current;
-          if (remainingToEliminate <= 0) {
+          // If we've eliminated the desired number of tickets, finish elimination.
+          if (totalEliminatedRef.current >= eliminationCount) {
             clearInterval(eliminationInterval);
+            eliminationIntervalRef.current = null;
             setIsRaffleRunning(false);
             return;
           }
 
-          const batchSize = Math.min(baseBatchSize, remainingToEliminate);
+          let batchSize = baseBatchSize;
+          if (extraTickets > 0) {
+            batchSize += 1;
+            extraTickets--;
+          }
+          // Ensure we don't eliminate more than needed.
+          batchSize = Math.min(
+            batchSize,
+            eliminationCount - totalEliminatedRef.current
+          );
 
-          // Randomly select batchSize tickets to eliminate
           const availableTicketsForElimination = ticketsRef.current.filter(
             (t) => !t.eliminated
           );
@@ -291,7 +312,7 @@ function App() {
             })
           );
 
-          // Remove the temporary elimination flash class after the animation (600ms)
+          // Remove the temporary flash class after the animation (600ms)
           setTimeout(() => {
             setTickets((prev) =>
               prev.map((ticket) => {
@@ -309,17 +330,20 @@ function App() {
           totalEliminatedRef.current += batchSize;
           currentBatch++;
           setEliminationProgress((currentBatch / totalBatches) * 100);
-
-          if (currentBatch >= totalBatches) {
-            clearInterval(eliminationInterval);
-            setIsRaffleRunning(false);
-          }
         }, 300);
+
+        // Store the interval ID so it can be cleared by the reset button if needed.
+        eliminationIntervalRef.current = eliminationInterval;
       }, 2000);
     }, 1000);
   };
 
   const handleReset = () => {
+    // Clear any running elimination interval if present.
+    if (eliminationIntervalRef.current) {
+      clearInterval(eliminationIntervalRef.current);
+      eliminationIntervalRef.current = null;
+    }
     setTickets(initialTickets);
     setTicketsToEliminate(1);
     setSearchQuery('');
@@ -352,17 +376,23 @@ function App() {
         <header className="p-4 md:p-8 flex flex-col items-center text-center">
           {/* Title Section */}
           <div className="mb-4 flex flex-col items-center">
-            <div className="flex items-center">
+            <div className="flex items-center ml-40">
               <Diamond className="text-yellow-400 w-8 h-8 mr-3 animate-pulse" />
-              <h1 className="text-3xl font-bold">
+              <h1 className="flex items-center text-3xl font-bold whitespace-nowrap">
                 <span className="text-yellow-400">Golden Hands</span>
                 <span className="mx-2">×</span>
-                <span className="text-yellow-400">The Diamond Casino</span>
+                <span className="text-yellow-400 ml-5">
+                  <img
+                    src="https://i.imgur.com/Vk3OicZ.png"
+                    className="w-3/5"
+                    alt="Diamond Logo"
+                  />
+                </span>
               </h1>
             </div>
 
             {/* Raffle Heading */}
-            <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-transparent bg-clip-text mt-2">
+            <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-transparent bg-clip-text mr-2">
               RAFFLE
             </h2>
             <div className="text-sm text-yellow-400/80">
@@ -445,9 +475,9 @@ function App() {
                   key={number}
                   onClick={() => handleTicketClick(number)}
                   className={`
-                  aspect-square rounded-lg p-2 flex flex-col items-center justify-center
-                  transition-all duration-300 transform hover:scale-105 cursor-pointer
-                  border-2 ${className || ''} ${
+                    aspect-square rounded-lg p-2 flex flex-col items-center justify-center
+                    transition-all duration-300 transform hover:scale-105 cursor-pointer
+                    border-2 ${className || ''} ${
                     eliminated
                       ? isDarkTheme
                         ? currentTheme.eliminateColor +
@@ -459,7 +489,7 @@ function App() {
                       ? `bg-gradient-to-br ${currentTheme.winnerColor} border-yellow-300 shadow-lg neon-text`
                       : `bg-gradient-to-br ${currentTheme.cardGradient} border-yellow-300 shadow-lg hover:shadow-yellow-400/20`
                   }
-                `}
+                  `}
                 >
                   <span className="text-xs font-medium">Ticket</span>
                   <span className="font-bold text-lg">{number}</span>
@@ -493,7 +523,7 @@ function App() {
                 <input
                   type="range"
                   min="1"
-                  max={availableTickets}
+                  max={availableTickets > 1 ? availableTickets - 1 : 1}
                   value={ticketsToEliminate}
                   onChange={(e) =>
                     setTicketsToEliminate(Number(e.target.value))
@@ -502,7 +532,9 @@ function App() {
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>Eliminate: {ticketsToEliminate}</span>
-                  <span>Max: {availableTickets}</span>
+                  <span>
+                    Max: {availableTickets > 1 ? availableTickets - 1 : 1}
+                  </span>
                 </div>
               </div>
 
