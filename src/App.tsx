@@ -206,7 +206,7 @@ function App() {
   }, []);
 
   const handleStartRaffle = () => {
-    if (isRaffleRunning || (ticketsToEliminate === 1 && availableTickets > 2))
+    if (isRaffleRunning || (ticketsToEliminate === 1 && availableTickets < 2))
       return;
 
     // Capture the current elimination count before resetting it.
