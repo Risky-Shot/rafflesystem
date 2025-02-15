@@ -86,7 +86,7 @@ function App() {
   const initialState = loadInitialState();
   const [tickets, setTickets] = useState<Ticket[]>(initialState.tickets);
   const [searchQuery, setSearchQuery] = useState('');
-  const [ticketsToEliminate, setTicketsToEliminate] = useState(126);
+  const [ticketsToEliminate, setTicketsToEliminate] = useState(1);
   const [isRaffleRunning, setIsRaffleRunning] = useState(false);
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(true);
