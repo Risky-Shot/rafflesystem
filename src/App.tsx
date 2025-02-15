@@ -1,5 +1,16 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Diamond, Search, Play, RotateCcw, Filter, Moon, Sun, Volume2, VolumeX, Palette } from 'lucide-react';
+import {
+  Diamond,
+  Search,
+  Play,
+  RotateCcw,
+  Filter,
+  Moon,
+  Sun,
+  Volume2,
+  VolumeX,
+  Palette,
+} from 'lucide-react';
 import { initialRaffleData } from './data/raffleData';
 
 interface Ticket {
@@ -8,7 +19,6 @@ interface Ticket {
   eliminated: boolean;
   highlighted?: boolean;
   className?: string;
-  playerId: string;
 }
 
 interface Theme {
@@ -27,7 +37,7 @@ const themes: Theme[] = [
     cardGradient: 'from-yellow-400 to-yellow-500',
     highlightColor: 'from-purple-400 to-purple-500',
     eliminateColor: 'bg-gray-800/50',
-    winnerColor: 'from-yellow-400 to-yellow-500'
+    winnerColor: 'from-yellow-400 to-yellow-500',
   },
   {
     name: 'Casino',
@@ -35,7 +45,7 @@ const themes: Theme[] = [
     cardGradient: 'from-red-500 to-red-600',
     highlightColor: 'from-green-400 to-green-500',
     eliminateColor: 'bg-red-950/50',
-    winnerColor: 'from-gold-400 to-gold-500'
+    winnerColor: 'from-gold-400 to-gold-500',
   },
   {
     name: 'Futuristic',
@@ -43,37 +53,34 @@ const themes: Theme[] = [
     cardGradient: 'from-cyan-400 to-blue-500',
     highlightColor: 'from-indigo-400 to-indigo-500',
     eliminateColor: 'bg-blue-950/50',
-    winnerColor: 'from-cyan-400 to-cyan-500'
-  }
+    winnerColor: 'from-cyan-400 to-cyan-500',
+  },
 ];
 
 const STORAGE_KEY = 'raffle_state';
 
 function App() {
   // Convert raffle data to tickets array
-  const initialTickets: Ticket[] = Object.entries(initialRaffleData).map(([raffleId, playerId]) => ({
-    number: parseInt(raffleId),
-    selected: false,
-    eliminated: false,
-    playerId
-  }));
+  const initialTickets: Ticket[] = Object.keys(initialRaffleData).map(
+    (raffleId) => ({
+      number: parseInt(raffleId),
+      selected: false,
+      eliminated: false,
+    })
+  );
 
   // Load initial state from localStorage or use default values
   const loadInitialState = () => {
     const savedState = localStorage.getItem(STORAGE_KEY);
     if (savedState) {
-      const { tickets: savedTickets, currentRound, winningTicket } = JSON.parse(savedState);
-      return {
+      const {
         tickets: savedTickets,
         currentRound,
-        winningTicket
-      };
+        winningTicket,
+      } = JSON.parse(savedState);
+      return { tickets: savedTickets, currentRound, winningTicket };
     }
-    return {
-      tickets: initialTickets,
-      currentRound: 1,
-      winningTicket: null
-    };
+    return { tickets: initialTickets, currentRound: 1, winningTicket: null };
   };
 
   const initialState = loadInitialState();
@@ -87,33 +94,48 @@ function App() {
   const [currentRound, setCurrentRound] = useState(initialState.currentRound);
   const [eliminationProgress, setEliminationProgress] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [winningTicket, setWinningTicket] = useState<number | null>(initialState.winningTicket);
+  const [winningTicket, setWinningTicket] = useState<number | null>(
+    initialState.winningTicket
+  );
   const [currentTheme, setCurrentTheme] = useState<Theme>(themes[0]);
 
+  // A ref to track total eliminated during a round (resets each round)
   const totalEliminatedRef = useRef(0);
   const ticketsRef = useRef(tickets);
   useEffect(() => {
     ticketsRef.current = tickets;
   }, [tickets]);
 
-  const tickSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'));
-  const eliminationSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2580/2580-preview.mp3'));
-  const winnerSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3'));
-  const shuffleSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3'));
+  // Sound effects
+  const tickSound = useRef(
+    new Audio(
+      'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'
+    )
+  );
+  const eliminationSound = useRef(
+    new Audio(
+      'https://assets.mixkit.co/active_storage/sfx/2580/2580-preview.mp3'
+    )
+  );
+  const winnerSound = useRef(
+    new Audio(
+      'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3'
+    )
+  );
+  const shuffleSound = useRef(
+    new Audio(
+      'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3'
+    )
+  );
 
-  // Save state to localStorage whenever it changes
+  // Persist state to localStorage
   useEffect(() => {
-    const state = {
-      tickets,
-      currentRound,
-      winningTicket
-    };
+    const state = { tickets, currentRound, winningTicket };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [tickets, currentRound, winningTicket]);
 
-  const availableTickets = tickets.filter(t => !t.eliminated).length;
-
-  const filteredTickets = tickets.filter(ticket => {
+  const availableTickets = tickets.filter((t) => !t.eliminated).length;
+  const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch = ticket.number.toString().includes(searchQuery);
     const matchesFilter = showOnlyAvailable ? !ticket.eliminated : true;
     return matchesSearch && matchesFilter;
@@ -122,180 +144,178 @@ function App() {
   const handleTicketClick = (number: number) => {
     if (isRaffleRunning) return;
     if (isSoundEnabled) tickSound.current.play();
-    setTickets(prev => prev.map(ticket =>
-      ticket.number === number ? { ...ticket, selected: !ticket.selected } : ticket
-    ));
+    setTickets((prev) =>
+      prev.map((ticket) =>
+        ticket.number === number
+          ? { ...ticket, selected: !ticket.selected }
+          : ticket
+      )
+    );
   };
 
   const shuffleAnimation = useCallback(() => {
     if (isSoundEnabled) shuffleSound.current.play();
-    
+
     const duration = 1000; // 1 second
-    const frames = 20; // Number of shuffle frames
+    const frames = 20; // Number of frames
     let frame = 0;
-    
+
     const interval = setInterval(() => {
-      setTickets(prev => {
-        const available = prev.filter(t => !t.eliminated);
+      setTickets((prev) => {
+        const available = prev.filter((t) => !t.eliminated);
         const shuffled = [...available].sort(() => Math.random() - 0.5);
-        
-        return prev.map(ticket => {
+
+        return prev.map((ticket) => {
           if (ticket.eliminated) return ticket;
-          const randomTicket = shuffled[Math.floor(Math.random() * shuffled.length)];
           return {
             ...ticket,
-            className: `shuffle-animation-${frame % 2 ? 'left' : 'right'}`
+            className: `shuffle-animation-${frame % 2 ? 'left' : 'right'}`,
           };
         });
       });
-      
+
       frame++;
       if (frame >= frames) {
         clearInterval(interval);
-        setTickets(prev => prev.map(t => ({ ...t, className: undefined })));
+        setTickets((prev) => prev.map((t) => ({ ...t, className: undefined })));
       }
     }, duration / frames);
   }, [isSoundEnabled]);
 
   const highlightRandomTickets = useCallback(() => {
-    setTickets(prevTickets => {
-      const available = prevTickets.filter(t => !t.eliminated);
+    setTickets((prevTickets) => {
+      const available = prevTickets.filter((t) => !t.eliminated);
       if (available.length === 0) return prevTickets;
-      
-      const randomIndexes = Array.from({ length: Math.min(5, available.length) }, () =>
-        Math.floor(Math.random() * available.length)
-      );
-      const highlightedNumbers = randomIndexes.map(i => available[i].number);
 
-      return prevTickets.map(ticket => ({
+      const randomIndexes = Array.from(
+        { length: Math.min(5, available.length) },
+        () => Math.floor(Math.random() * available.length)
+      );
+      const highlightedNumbers = randomIndexes.map((i) => available[i].number);
+
+      return prevTickets.map((ticket) => ({
         ...ticket,
-        highlighted: highlightedNumbers.includes(ticket.number)
+        highlighted: highlightedNumbers.includes(ticket.number),
       }));
     });
   }, []);
 
-  const eliminateTickets = useCallback((batchSize: number) => {
-    let eliminatedInBatch = 0;
-    
-    setTickets(prevTickets => {
-      const available = prevTickets.filter(t => !t.eliminated);
-      if (available.length === 0) return prevTickets;
-
-      const remainingToEliminate = ticketsToEliminate - totalEliminatedRef.current;
-      const ticketsToRemove = Math.min(batchSize, available.length, remainingToEliminate);
-
-      if (ticketsToRemove <= 0) return prevTickets;
-
-      eliminatedInBatch = ticketsToRemove;
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      const toEliminate = shuffled.slice(0, ticketsToRemove).map(t => t.number);
-
-      if (isSoundEnabled) eliminationSound.current.play();
-
-      return prevTickets.map(ticket => ({
-        ...ticket,
-        eliminated: ticket.eliminated || toEliminate.includes(ticket.number),
-        highlighted: false,
-        className: toEliminate.includes(ticket.number) ? 'eliminate-flash' : ''
-      }));
-    });
-
-    totalEliminatedRef.current += eliminatedInBatch;
-    return totalEliminatedRef.current < ticketsToEliminate;
-  }, [ticketsToEliminate, isSoundEnabled]);
-
   const handleStartRaffle = () => {
-  if (isRaffleRunning || ticketsToEliminate <= 0) return;
+    if (isRaffleRunning || ticketsToEliminate <= 0) return;
 
-  setIsRaffleRunning(true);
-  setCurrentRound((prev) => prev + 1);
-  setEliminationProgress(0);
-  totalEliminatedRef.current = 0; // Reset elimination count for this round
-  setWinningTicket(null);
+    setIsRaffleRunning(true);
+    setCurrentRound((prev) => prev + 1);
+    setEliminationProgress(0);
+    totalEliminatedRef.current = 0; // Reset for new round
+    setWinningTicket(null);
 
-  // Phase 1: Shuffle Animation (1 second)
-  shuffleAnimation();
+    // Phase 1: Shuffle Animation (1 second)
+    shuffleAnimation();
 
-  setTimeout(() => {
-    const highlightInterval = setInterval(highlightRandomTickets, 100);
-
-    // Phase 3: After 2 seconds, stop highlighting and begin elimination
     setTimeout(() => {
-      clearInterval(highlightInterval);
+      // Start highlight phase
+      const highlightInterval = setInterval(highlightRandomTickets, 100);
 
-      const roundEliminationCount = ticketsToEliminate; // target tickets to eliminate this round
-      const totalBatches = Math.min(10, roundEliminationCount);
-      const baseBatchSize = Math.ceil(roundEliminationCount / totalBatches);
-      let currentBatch = 0;
+      // After 2 seconds, stop highlighting and clear any leftover purple highlight
+      setTimeout(() => {
+        clearInterval(highlightInterval);
+        setTickets((prev) =>
+          prev.map((ticket) => ({ ...ticket, highlighted: false }))
+        );
 
-      const eliminationInterval = setInterval(() => {
-        const availableCount = ticketsRef.current.filter((t) => !t.eliminated).length;
-        if (availableCount <= 1) {
-          clearInterval(eliminationInterval);
-          setIsRaffleRunning(false);
-          if (isSoundEnabled) winnerSound.current.play();
-          setShowConfetti(true);
-          const winner = ticketsRef.current.find((t) => !t.eliminated);
-          if (winner) {
-            setWinningTicket(winner.number);
-            setTickets((prev) =>
-              prev.map((t) =>
-                t.number === winner.number ? { ...t, className: 'winner-zoom spotlight' } : t
-              )
-            );
-          }
-          setTimeout(() => setShowConfetti(false), 5000);
-          return;
-        }
+        // Phase 2: Elimination logic
+        const roundEliminationCount = ticketsToEliminate;
+        const totalBatches = Math.min(10, roundEliminationCount);
+        const baseBatchSize = Math.ceil(roundEliminationCount / totalBatches);
+        let currentBatch = 0;
 
-        // Calculate exactly how many we still need to eliminate in this round:
-        const remainingToEliminate = roundEliminationCount - totalEliminatedRef.current;
-        if (remainingToEliminate <= 0) {
-          clearInterval(eliminationInterval);
-          setIsRaffleRunning(false);
-          return;
-        }
-
-        // In each batch, do not exceed the remaining count.
-        const batchSize = Math.min(baseBatchSize, remainingToEliminate);
-
-        // Update tickets by randomly selecting batchSize available tickets to eliminate:
-        setTickets((prevTickets) => {
-          const available = prevTickets.filter((t) => !t.eliminated);
-          if (available.length === 0) return prevTickets;
-
-          const shuffled = [...available].sort(() => Math.random() - 0.5);
-          // Only select as many as needed in this batch:
-          const selectedToEliminate = shuffled.slice(0, batchSize).map((t) => t.number);
-
-          // Mark the chosen tickets as eliminated:
-          return prevTickets.map((ticket) => {
-            if (selectedToEliminate.includes(ticket.number)) {
-              return {
-                ...ticket,
-                eliminated: true,
-                highlighted: false,
-                className: 'eliminate-flash'
-              };
+        const eliminationInterval = setInterval(() => {
+          const availableCount = ticketsRef.current.filter(
+            (t) => !t.eliminated
+          ).length;
+          if (availableCount <= 1) {
+            clearInterval(eliminationInterval);
+            setIsRaffleRunning(false);
+            if (isSoundEnabled) winnerSound.current.play();
+            setShowConfetti(true);
+            const winner = ticketsRef.current.find((t) => !t.eliminated);
+            if (winner) {
+              setWinningTicket(winner.number);
+              setTickets((prev) =>
+                prev.map((t) =>
+                  t.number === winner.number
+                    ? { ...t, className: 'winner-zoom spotlight' }
+                    : t
+                )
+              );
             }
-            return ticket;
-          });
-        });
+            setTimeout(() => setShowConfetti(false), 5000);
+            return;
+          }
 
-        // Synchronously update our elimination counter:
-        totalEliminatedRef.current += batchSize;
-        currentBatch++;
-        setEliminationProgress((currentBatch / totalBatches) * 100);
+          // Calculate how many tickets we still need to eliminate
+          const remainingToEliminate =
+            roundEliminationCount - totalEliminatedRef.current;
+          if (remainingToEliminate <= 0) {
+            clearInterval(eliminationInterval);
+            setIsRaffleRunning(false);
+            return;
+          }
 
-        if (currentBatch >= totalBatches) {
-          clearInterval(eliminationInterval);
-          setIsRaffleRunning(false);
-        }
-      }, 300);
-    }, 2000);
-  }, 1000);
-};
+          const batchSize = Math.min(baseBatchSize, remainingToEliminate);
 
+          // Randomly select batchSize tickets to eliminate
+          const availableTicketsForElimination = ticketsRef.current.filter(
+            (t) => !t.eliminated
+          );
+          const shuffled = [...availableTicketsForElimination].sort(
+            () => Math.random() - 0.5
+          );
+          const selectedToEliminate = shuffled
+            .slice(0, batchSize)
+            .map((t) => t.number);
+
+          setTickets((prev) =>
+            prev.map((ticket) => {
+              if (selectedToEliminate.includes(ticket.number)) {
+                return {
+                  ...ticket,
+                  eliminated: true,
+                  highlighted: false,
+                  className: 'eliminate-flash',
+                };
+              }
+              return ticket;
+            })
+          );
+
+          // Remove the temporary elimination flash class after the animation (600ms)
+          setTimeout(() => {
+            setTickets((prev) =>
+              prev.map((ticket) => {
+                if (
+                  ticket.eliminated &&
+                  ticket.className === 'eliminate-flash'
+                ) {
+                  return { ...ticket, className: '' };
+                }
+                return ticket;
+              })
+            );
+          }, 600);
+
+          totalEliminatedRef.current += batchSize;
+          currentBatch++;
+          setEliminationProgress((currentBatch / totalBatches) * 100);
+
+          if (currentBatch >= totalBatches) {
+            clearInterval(eliminationInterval);
+            setIsRaffleRunning(false);
+          }
+        }, 300);
+      }, 2000);
+    }, 1000);
+  };
 
   const handleReset = () => {
     setTickets(initialTickets);
@@ -307,18 +327,19 @@ function App() {
     setEliminationProgress(0);
     setWinningTicket(null);
     totalEliminatedRef.current = 0;
-    // Clear localStorage when reset is clicked
     localStorage.removeItem(STORAGE_KEY);
   };
 
   const cycleTheme = () => {
-    const currentIndex = themes.findIndex(t => t.name === currentTheme.name);
+    const currentIndex = themes.findIndex((t) => t.name === currentTheme.name);
     const nextIndex = (currentIndex + 1) % themes.length;
     setCurrentTheme(themes[nextIndex]);
   };
 
   return (
-    <div className={`h-screen flex flex-col bg-gradient-to-b ${currentTheme.bgGradient} text-white relative`}>
+    <div
+      className={`h-screen flex flex-col bg-gradient-to-b ${currentTheme.bgGradient} text-white relative`}
+    >
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50">
           <div className="absolute inset-0 animate-confetti" />
@@ -326,8 +347,9 @@ function App() {
       )}
 
       <div className="relative z-10 h-full flex flex-col">
-        <header className="p-4 md:p-8 text-center">
-          <div className="flex items-center justify-between mb-4 max-w-4xl mx-auto">
+        <header className="p-4 md:p-8 flex flex-col items-center text-center">
+          {/* Title Section */}
+          <div className="mb-4 flex flex-col items-center">
             <div className="flex items-center">
               <Diamond className="text-yellow-400 w-8 h-8 mr-3 animate-pulse" />
               <h1 className="text-3xl font-bold">
@@ -336,35 +358,52 @@ function App() {
                 <span className="text-yellow-400">The Diamond Casino</span>
               </h1>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setIsSoundEnabled(prev => !prev)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                {isSoundEnabled ? (
-                  <Volume2 className="w-6 h-6 text-yellow-400" />
-                ) : (
-                  <VolumeX className="w-6 h-6 text-gray-400" />
-                )}
-              </button>
-              <button onClick={cycleTheme} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <Palette className="w-6 h-6 text-yellow-400" />
-              </button>
-              <button onClick={() => setIsDarkTheme(prev => !prev)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                {isDarkTheme ? (
-                  <Moon className="w-6 h-6 text-yellow-400" />
-                ) : (
-                  <Sun className="w-6 h-6 text-yellow-400" />
-                )}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-transparent bg-clip-text">
+
+            {/* Raffle Heading */}
+            <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-transparent bg-clip-text mt-2">
               RAFFLE
             </h2>
-            <div className="text-sm text-yellow-400/80">Round {currentRound}</div>
+            <div className="text-sm text-yellow-400/80">
+              Round {currentRound}
+            </div>
+          </div>
+
+          {/* Buttons Section (Bottom Right) */}
+          <div className="absolute right-4 flex flex-col items-end">
+            <button
+              onClick={() => setIsSoundEnabled((prev) => !prev)}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              {isSoundEnabled ? (
+                <Volume2 className="w-6 h-6 text-yellow-400" />
+              ) : (
+                <VolumeX className="w-6 h-6 text-gray-400" />
+              )}
+            </button>
+            <button
+              onClick={cycleTheme}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <Palette className="w-6 h-6 text-yellow-400" />
+            </button>
+            <button
+              onClick={() => setIsDarkTheme((prev) => !prev)}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              {isDarkTheme ? (
+                <Moon className="w-6 h-6 text-yellow-400" />
+              ) : (
+                <Sun className="w-6 h-6 text-yellow-400" />
+              )}
+            </button>
           </div>
         </header>
 
-        <div className={`px-4 md:px-8 py-4 border-y ${isDarkTheme ? 'border-gray-800' : 'border-white/20'}`}>
+        <div
+          className={`px-4 md:px-8 py-4 border-y ${
+            isDarkTheme ? 'border-gray-800' : 'border-white/20'
+          }`}
+        >
           <div className="max-w-4xl mx-auto flex flex-wrap gap-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -374,20 +413,20 @@ function App() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`w-full pl-10 pr-4 py-2 rounded-lg border outline-none transition-colors ${
-                  isDarkTheme 
-                    ? 'bg-gray-800/50 border-gray-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400' 
+                  isDarkTheme
+                    ? 'bg-gray-800/50 border-gray-700 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
                     : 'bg-white/10 border-white/20 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
                 }`}
               />
             </div>
             <button
-              onClick={() => setShowOnlyAvailable(prev => !prev)}
+              onClick={() => setShowOnlyAvailable((prev) => !prev)}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                showOnlyAvailable 
-                  ? 'bg-yellow-400 text-gray-900' 
-                  : isDarkTheme 
-                    ? 'bg-gray-800/50 text-gray-300' 
-                    : 'bg-white/10 text-gray-100'
+                showOnlyAvailable
+                  ? 'bg-yellow-400 text-gray-900'
+                  : isDarkTheme
+                  ? 'bg-gray-800/50 text-gray-300'
+                  : 'bg-white/10 text-gray-100'
               }`}
             >
               <Filter className="w-4 h-4" />
@@ -398,43 +437,53 @@ function App() {
 
         <div className="flex-1 overflow-auto px-4 md:px-8 py-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 max-w-4xl mx-auto">
-            {filteredTickets.map(({ number, eliminated, highlighted, className, playerId }) => (
-              <div
-                key={number}
-                onClick={() => handleTicketClick(number)}
-                className={`
+            {filteredTickets.map(
+              ({ number, eliminated, highlighted, className }) => (
+                <div
+                  key={number}
+                  onClick={() => handleTicketClick(number)}
+                  className={`
                   aspect-square rounded-lg p-2 flex flex-col items-center justify-center
                   transition-all duration-300 transform hover:scale-105 cursor-pointer
                   border-2 ${className || ''} ${
-                    eliminated 
+                    eliminated
                       ? isDarkTheme
-                        ? currentTheme.eliminateColor + ' border-gray-700 opacity-50'
-                        : 'bg-black/30 border-white/20 opacity-50'
+                        ? currentTheme.eliminateColor +
+                          ' border-gray-700 opacity-80'
+                        : 'bg-black/30 border-white/20 opacity-80'
                       : highlighted
-                        ? `bg-gradient-to-br ${currentTheme.highlightColor} border-purple-300 shadow-lg animate-pulse`
-                        : number === winningTicket
-                          ? `bg-gradient-to-br ${currentTheme.winnerColor} border-yellow-300 shadow-lg neon-text`
-                          : `bg-gradient-to-br ${currentTheme.cardGradient} border-yellow-300 shadow-lg hover:shadow-yellow-400/20`
+                      ? `bg-gradient-to-br ${currentTheme.highlightColor} border-purple-300 shadow-lg animate-pulse`
+                      : number === winningTicket
+                      ? `bg-gradient-to-br ${currentTheme.winnerColor} border-yellow-300 shadow-lg neon-text`
+                      : `bg-gradient-to-br ${currentTheme.cardGradient} border-yellow-300 shadow-lg hover:shadow-yellow-400/20`
                   }
                 `}
-              >
-                <span className="text-xs font-medium">Ticket</span>
-                <span className="font-bold text-lg">{number}</span>
-                <span className="text-xs mt-1 opacity-75">{playerId}</span>
-              </div>
-            ))}
+                >
+                  <span className="text-xs font-medium">Ticket</span>
+                  <span className="font-bold text-lg">{number}</span>
+                </div>
+              )
+            )}
           </div>
         </div>
 
-        <div className={`p-3 border-t ${
-          isDarkTheme 
-            ? 'border-gray-800 bg-gray-900/50' 
-            : 'border-white/20 bg-black/50'
-        } backdrop-blur-sm`}>
+        <div
+          className={`p-3 border-t ${
+            isDarkTheme
+              ? 'border-gray-800 bg-gray-900/50'
+              : 'border-white/20 bg-black/50'
+          } backdrop-blur-sm`}
+        >
           <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-4">
             <div className="flex items-center gap-2 sm:w-1/4">
-              <span className="text-3xl font-bold text-yellow-400">{availableTickets}</span>
-              <span className="text-sm text-gray-400">tickets<br/>available</span>
+              <span className="text-3xl font-bold text-yellow-400">
+                {availableTickets}
+              </span>
+              <span className="text-sm text-gray-400">
+                tickets
+                <br />
+                available
+              </span>
             </div>
 
             <div className="flex-1 flex items-center gap-4">
@@ -444,7 +493,9 @@ function App() {
                   min="1"
                   max={availableTickets}
                   value={ticketsToEliminate}
-                  onChange={(e) => setTicketsToEliminate(Number(e.target.value))}
+                  onChange={(e) =>
+                    setTicketsToEliminate(Number(e.target.value))
+                  }
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -471,10 +522,10 @@ function App() {
               </button>
             </div>
           </div>
-          
+
           {isRaffleRunning && eliminationProgress > 0 && (
             <div className="mt-2 w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
-              <div 
+              <div
                 className="bg-yellow-400 h-full transition-all duration-300 progress-animate"
                 style={{ width: `${eliminationProgress}%` }}
               />
