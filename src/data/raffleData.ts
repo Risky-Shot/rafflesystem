@@ -2,7 +2,7 @@ import { RaffleData } from '../types';
 
 // Generate sample raffle data from ID 100 to 520
 export const initialRaffleData: RaffleData = Array.from(
-  { length: 839 }, // 520 - 100 + 1
+  { length: 840 }, // 520 - 100 + 1
   (_, index) => {
     const raffleId = (index + 100).toString();
     const playerId = `player${Math.floor(Math.random() * 100)}`; // Random player IDs
