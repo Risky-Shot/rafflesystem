@@ -205,64 +205,97 @@ function App() {
   }, [ticketsToEliminate, isSoundEnabled]);
 
   const handleStartRaffle = () => {
-    if (isRaffleRunning || ticketsToEliminate <= 0) return;
+  if (isRaffleRunning || ticketsToEliminate <= 0) return;
 
-    setIsRaffleRunning(true);
-    setCurrentRound(prev => prev + 1);
-    setEliminationProgress(0);
-    totalEliminatedRef.current = 0;
-    setWinningTicket(null);
-    
-    // Phase 1: Shuffle Animation (1 second)
-    shuffleAnimation();
-    
-    // Phase 2: Highlight animation (2 seconds)
+  setIsRaffleRunning(true);
+  setCurrentRound((prev) => prev + 1);
+  setEliminationProgress(0);
+  totalEliminatedRef.current = 0; // Reset elimination count for this round
+  setWinningTicket(null);
+
+  // Phase 1: Shuffle Animation (1 second)
+  shuffleAnimation();
+
+  setTimeout(() => {
+    const highlightInterval = setInterval(highlightRandomTickets, 100);
+
+    // Phase 3: After 2 seconds, stop highlighting and begin elimination
     setTimeout(() => {
-      const highlightInterval = setInterval(highlightRandomTickets, 100);
-      
-      // Phase 3: Elimination (after 2 seconds of highlights)
-      setTimeout(() => {
-        clearInterval(highlightInterval);
-        
-        const totalBatches = Math.min(10, ticketsToEliminate);
-        const batchSize = Math.ceil(ticketsToEliminate / totalBatches);
-        let currentBatch = 0;
+      clearInterval(highlightInterval);
 
-        const eliminationInterval = setInterval(() => {
-          const remainingAvailable = ticketsRef.current.filter(t => !t.eliminated).length;
-          if (remainingAvailable <= 1) {
-            clearInterval(eliminationInterval);
-            setIsRaffleRunning(false);
-            if (isSoundEnabled) winnerSound.current.play();
-            setShowConfetti(true);
-            
-            // Set winning ticket and add spotlight effect
-            const winner = ticketsRef.current.find(t => !t.eliminated);
-            if (winner) {
-              setWinningTicket(winner.number);
-              setTickets(prev => prev.map(t => 
-                t.number === winner.number 
-                  ? { ...t, className: 'winner-zoom spotlight' }
-                  : t
-              ));
+      const roundEliminationCount = ticketsToEliminate; // target tickets to eliminate this round
+      const totalBatches = Math.min(10, roundEliminationCount);
+      const baseBatchSize = Math.ceil(roundEliminationCount / totalBatches);
+      let currentBatch = 0;
+
+      const eliminationInterval = setInterval(() => {
+        const availableCount = ticketsRef.current.filter((t) => !t.eliminated).length;
+        if (availableCount <= 1) {
+          clearInterval(eliminationInterval);
+          setIsRaffleRunning(false);
+          if (isSoundEnabled) winnerSound.current.play();
+          setShowConfetti(true);
+          const winner = ticketsRef.current.find((t) => !t.eliminated);
+          if (winner) {
+            setWinningTicket(winner.number);
+            setTickets((prev) =>
+              prev.map((t) =>
+                t.number === winner.number ? { ...t, className: 'winner-zoom spotlight' } : t
+              )
+            );
+          }
+          setTimeout(() => setShowConfetti(false), 5000);
+          return;
+        }
+
+        // Calculate exactly how many we still need to eliminate in this round:
+        const remainingToEliminate = roundEliminationCount - totalEliminatedRef.current;
+        if (remainingToEliminate <= 0) {
+          clearInterval(eliminationInterval);
+          setIsRaffleRunning(false);
+          return;
+        }
+
+        // In each batch, do not exceed the remaining count.
+        const batchSize = Math.min(baseBatchSize, remainingToEliminate);
+
+        // Update tickets by randomly selecting batchSize available tickets to eliminate:
+        setTickets((prevTickets) => {
+          const available = prevTickets.filter((t) => !t.eliminated);
+          if (available.length === 0) return prevTickets;
+
+          const shuffled = [...available].sort(() => Math.random() - 0.5);
+          // Only select as many as needed in this batch:
+          const selectedToEliminate = shuffled.slice(0, batchSize).map((t) => t.number);
+
+          // Mark the chosen tickets as eliminated:
+          return prevTickets.map((ticket) => {
+            if (selectedToEliminate.includes(ticket.number)) {
+              return {
+                ...ticket,
+                eliminated: true,
+                highlighted: false,
+                className: 'eliminate-flash'
+              };
             }
-            
-            setTimeout(() => setShowConfetti(false), 5000);
-            return;
-          }
+            return ticket;
+          });
+        });
 
-          const hasMore = eliminateTickets(batchSize);
-          currentBatch++;
-          setEliminationProgress((currentBatch / totalBatches) * 100);
-          
-          if (!hasMore || currentBatch >= totalBatches) {
-            clearInterval(eliminationInterval);
-            setIsRaffleRunning(false);
-          }
-        }, 300);
-      }, 2000);
-    }, 1000);
-  };
+        // Synchronously update our elimination counter:
+        totalEliminatedRef.current += batchSize;
+        currentBatch++;
+        setEliminationProgress((currentBatch / totalBatches) * 100);
+
+        if (currentBatch >= totalBatches) {
+          clearInterval(eliminationInterval);
+          setIsRaffleRunning(false);
+        }
+      }, 300);
+    }, 2000);
+  }, 1000);
+};
+
 
   const handleReset = () => {
     setTickets(initialTickets);
@@ -387,7 +420,7 @@ function App() {
               >
                 <span className="text-xs font-medium">Ticket</span>
                 <span className="font-bold text-lg">{number}</span>
-                
+                <span className="text-xs mt-1 opacity-75">{playerId}</span>
               </div>
             ))}
           </div>
