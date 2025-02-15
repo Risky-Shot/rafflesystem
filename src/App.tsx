@@ -387,7 +387,7 @@ function App() {
               >
                 <span className="text-xs font-medium">Ticket</span>
                 <span className="font-bold text-lg">{number}</span>
-                <span className="text-xs mt-1 opacity-75">{playerId}</span>
+                
               </div>
             ))}
           </div>
