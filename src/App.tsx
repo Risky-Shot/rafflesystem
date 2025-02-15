@@ -319,7 +319,7 @@ function App() {
 
   const handleReset = () => {
     setTickets(initialTickets);
-    setTicketsToEliminate(126);
+    setTicketsToEliminate(1);
     setSearchQuery('');
     setShowOnlyAvailable(false);
     setCurrentRound(1);
