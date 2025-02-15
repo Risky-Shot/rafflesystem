@@ -209,6 +209,8 @@ function App() {
     totalEliminatedRef.current = 0; // Reset for new round
     setWinningTicket(null);
 
+    setTicketsToEliminate(1);
+
     // Phase 1: Shuffle Animation (1 second)
     shuffleAnimation();
 
