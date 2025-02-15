@@ -2,21 +2,179 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar styles */
-@layer utilities {
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
+/* Neon glow effect for winner */
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow: 
+      0 0 7px #fff,
+      0 0 10px #fff,
+      0 0 21px #fff,
+      0 0 42px #ffad36,
+      0 0 82px #ffad36,
+      0 0 92px #ffad36,
+      0 0 102px #ffad36,
+      0 0 151px #ffad36;
   }
-  
-  .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-blue-100 rounded-full;
+  50% {
+    text-shadow: 
+      0 0 4px #fff,
+      0 0 7px #fff,
+      0 0 18px #fff,
+      0 0 38px #ffad36,
+      0 0 73px #ffad36,
+      0 0 80px #ffad36,
+      0 0 94px #ffad36,
+      0 0 140px #ffad36;
   }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-blue-500 rounded-full;
+}
+
+/* Enhanced confetti animation */
+@keyframes confetti-rain {
+  0% {
+    background-position: 
+      0 -10%,
+      0 -10%,
+      0 -10%,
+      0 -10%,
+      0 -10%;
+    opacity: 1;
   }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-blue-600;
+  100% {
+    background-position: 
+      20% 110%,
+      -20% 110%,
+      10% 110%,
+      -10% 110%,
+      0% 110%;
+    opacity: 0;
   }
+}
+
+.animate-confetti {
+  background-image: 
+    radial-gradient(circle, #FFD700 3px, transparent 4px),
+    radial-gradient(circle, #FF69B4 3px, transparent 4px),
+    radial-gradient(circle, #00FF00 3px, transparent 4px),
+    radial-gradient(circle, #FF4500 3px, transparent 4px),
+    radial-gradient(circle, #4169E1 3px, transparent 4px);
+  background-size: 
+    5% 5%,
+    5% 5%,
+    5% 5%,
+    5% 5%,
+    5% 5%;
+  animation: confetti-rain 5s linear infinite;
+}
+
+/* Spotlight effect for winning ticket */
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.spotlight {
+  position: relative;
+}
+
+.spotlight::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle at center, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+  animation: spotlight 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Elimination flash effect */
+@keyframes eliminate-flash {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.eliminate-flash {
+  animation: eliminate-flash 0.5s ease-out forwards;
+}
+
+/* Winner zoom effect */
+@keyframes winner-zoom {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1.3);
+  }
+}
+
+.winner-zoom {
+  animation: winner-zoom 0.5s ease-out forwards;
+}
+
+/* Progress bar animation */
+@keyframes progress-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px #ffad36;
+  }
+  50% {
+    box-shadow: 0 0 15px #ffad36;
+  }
+}
+
+.progress-animate {
+  animation: progress-glow 1s ease-in-out infinite;
+}
+
+/* Shuffle animations */
+@keyframes shuffle-left {
+  0% {
+    transform: translateX(0) rotate(0);
+  }
+  50% {
+    transform: translateX(-10px) rotate(-5deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+}
+
+@keyframes shuffle-right {
+  0% {
+    transform: translateX(0) rotate(0);
+  }
+  50% {
+     transform: translateX(10px) rotate(5deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+}
+
+.shuffle-animation-left {
+  animation: shuffle-left 0.1s ease-in-out;
+}
+
+.shuffle-animation-right {
+  animation: shuffle-right 0.1s ease-in-out;
 }
