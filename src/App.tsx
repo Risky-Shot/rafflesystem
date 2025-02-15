@@ -104,11 +104,7 @@ function App() {
   const ticketsRef = useRef(tickets);
   useEffect(() => {
     ticketsRef.current = tickets;
-    console.log(isRaffleRunning, winningTicket, ticketsToEliminate);
   }, [tickets]);
-
-  // Create a ref to store the elimination interval ID
-  const eliminationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sound effects
   const tickSound = useRef(
@@ -167,7 +163,6 @@ function App() {
     const interval = setInterval(() => {
       setTickets((prev) => {
         const available = prev.filter((t) => !t.eliminated);
-        // The shuffled variable is no longer used but kept in case you want to extend logic
         const shuffled = [...available].sort(() => Math.random() - 0.5);
 
         return prev.map((ticket) => {
@@ -206,11 +201,7 @@ function App() {
   }, []);
 
   const handleStartRaffle = () => {
-    if (isRaffleRunning || (ticketsToEliminate === 1 && availableTickets > 2))
-      return;
-
-    // Capture the current elimination count before resetting it.
-    const eliminationCount = ticketsToEliminate;
+    if (isRaffleRunning || ticketsToEliminate <= 0) return;
 
     setIsRaffleRunning(true);
     setCurrentRound((prev) => prev + 1);
@@ -218,7 +209,6 @@ function App() {
     totalEliminatedRef.current = 0; // Reset for new round
     setWinningTicket(null);
 
-    // Reset the slider for the next round.
     setTicketsToEliminate(1);
 
     // Phase 1: Shuffle Animation (1 second)
@@ -228,7 +218,7 @@ function App() {
       // Start highlight phase
       const highlightInterval = setInterval(highlightRandomTickets, 100);
 
-      // After 2 seconds, stop highlighting and clear any leftover highlight
+      // After 2 seconds, stop highlighting and clear any leftover purple highlight
       setTimeout(() => {
         clearInterval(highlightInterval);
         setTickets((prev) =>
@@ -236,21 +226,17 @@ function App() {
         );
 
         // Phase 2: Elimination logic
-        const totalBatches = Math.min(10, eliminationCount);
-        const baseBatchSize = Math.floor(eliminationCount / totalBatches);
-        let extraTickets = eliminationCount % totalBatches;
+        const roundEliminationCount = ticketsToEliminate;
+        const totalBatches = Math.min(10, roundEliminationCount);
+        const baseBatchSize = Math.ceil(roundEliminationCount / totalBatches);
         let currentBatch = 0;
 
         const eliminationInterval = setInterval(() => {
-          // Get the number of available tickets
           const availableCount = ticketsRef.current.filter(
             (t) => !t.eliminated
           ).length;
-
-          // If only 1 ticket remains, the game is over.
-          if (availableCount === 1) {
+          if (availableCount <= 1) {
             clearInterval(eliminationInterval);
-            eliminationIntervalRef.current = null;
             setIsRaffleRunning(false);
             if (isSoundEnabled) winnerSound.current.play();
             setShowConfetti(true);
@@ -269,25 +255,18 @@ function App() {
             return;
           }
 
-          // If we've eliminated the desired number of tickets, finish elimination.
-          if (totalEliminatedRef.current >= eliminationCount) {
+          // Calculate how many tickets we still need to eliminate
+          const remainingToEliminate =
+            roundEliminationCount - totalEliminatedRef.current;
+          if (remainingToEliminate <= 0) {
             clearInterval(eliminationInterval);
-            eliminationIntervalRef.current = null;
             setIsRaffleRunning(false);
             return;
           }
 
-          let batchSize = baseBatchSize;
-          if (extraTickets > 0) {
-            batchSize += 1;
-            extraTickets--;
-          }
-          // Ensure we don't eliminate more than needed.
-          batchSize = Math.min(
-            batchSize,
-            eliminationCount - totalEliminatedRef.current
-          );
+          const batchSize = Math.min(baseBatchSize, remainingToEliminate);
 
+          // Randomly select batchSize tickets to eliminate
           const availableTicketsForElimination = ticketsRef.current.filter(
             (t) => !t.eliminated
           );
@@ -312,7 +291,7 @@ function App() {
             })
           );
 
-          // Remove the temporary flash class after the animation (600ms)
+          // Remove the temporary elimination flash class after the animation (600ms)
           setTimeout(() => {
             setTickets((prev) =>
               prev.map((ticket) => {
@@ -330,20 +309,17 @@ function App() {
           totalEliminatedRef.current += batchSize;
           currentBatch++;
           setEliminationProgress((currentBatch / totalBatches) * 100);
-        }, 300);
 
-        // Store the interval ID so it can be cleared by the reset button if needed.
-        eliminationIntervalRef.current = eliminationInterval;
+          if (currentBatch >= totalBatches) {
+            clearInterval(eliminationInterval);
+            setIsRaffleRunning(false);
+          }
+        }, 300);
       }, 2000);
     }, 1000);
   };
 
   const handleReset = () => {
-    // Clear any running elimination interval if present.
-    if (eliminationIntervalRef.current) {
-      clearInterval(eliminationIntervalRef.current);
-      eliminationIntervalRef.current = null;
-    }
     setTickets(initialTickets);
     setTicketsToEliminate(1);
     setSearchQuery('');
@@ -469,9 +445,9 @@ function App() {
                   key={number}
                   onClick={() => handleTicketClick(number)}
                   className={`
-                    aspect-square rounded-lg p-2 flex flex-col items-center justify-center
-                    transition-all duration-300 transform hover:scale-105 cursor-pointer
-                    border-2 ${className || ''} ${
+                  aspect-square rounded-lg p-2 flex flex-col items-center justify-center
+                  transition-all duration-300 transform hover:scale-105 cursor-pointer
+                  border-2 ${className || ''} ${
                     eliminated
                       ? isDarkTheme
                         ? currentTheme.eliminateColor +
@@ -483,7 +459,7 @@ function App() {
                       ? `bg-gradient-to-br ${currentTheme.winnerColor} border-yellow-300 shadow-lg neon-text`
                       : `bg-gradient-to-br ${currentTheme.cardGradient} border-yellow-300 shadow-lg hover:shadow-yellow-400/20`
                   }
-                  `}
+                `}
                 >
                   <span className="text-xs font-medium">Ticket</span>
                   <span className="font-bold text-lg">{number}</span>
@@ -517,7 +493,7 @@ function App() {
                 <input
                   type="range"
                   min="1"
-                  max={availableTickets > 1 ? availableTickets - 1 : 1}
+                  max={availableTickets}
                   value={ticketsToEliminate}
                   onChange={(e) =>
                     setTicketsToEliminate(Number(e.target.value))
@@ -526,9 +502,7 @@ function App() {
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>Eliminate: {ticketsToEliminate}</span>
-                  <span>
-                    Max: {availableTickets > 1 ? availableTickets - 1 : 1}
-                  </span>
+                  <span>Max: {availableTickets}</span>
                 </div>
               </div>
 
